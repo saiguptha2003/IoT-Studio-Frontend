@@ -9,7 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 export function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [timer, setTimer] = useState("");  // To store the time entered by the user
+  const [timer, setTimer] = useState(""); // To store the time entered by the user
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -24,23 +24,24 @@ export function SignIn() {
     }
 
     try {
-      const response = await fetch("https://iot-studio.onrender.com/auth/signin", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username_or_email: email,
           password,
+          session_required: parseInt(timer, 10),
         }),
       });
 
       const data = await response.json();
-      console.log(data)
+      console.log(data);
 
       if (data.token) {
         localStorage.setItem("authToken", data.token);
         // Save the timer to localStorage so it persists
         localStorage.setItem("sessionTime", timer);
-         localStorage.setItem("sessionStartTime", Math.floor(Date.now() / 1000));
+        localStorage.setItem("sessionStartTime", Math.floor(Date.now() / 1000));
         navigate("/dashboard");
       } else {
         setError(data.error || "Login failed. Please try again.");
@@ -55,9 +56,18 @@ export function SignIn() {
       <div className="w-full lg:w-3/5 mt-24">
         <div className="text-center">
           <Typography variant="h2" className="font-bold mb-4">Sign In</Typography>
-          <Typography variant="paragraph" color="blue-gray" className="text-lg font-normal">Enter your email and password to Sign In.</Typography>
+          <Typography
+            variant="paragraph"
+            color="blue-gray"
+            className="text-lg font-normal"
+          >
+            Enter your email and password to Sign In.
+          </Typography>
         </div>
-        <form className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2" onSubmit={handleSignIn}>
+        <form
+          className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2"
+          onSubmit={handleSignIn}
+        >
           <div className="mb-1 flex flex-col gap-6">
             <Typography variant="small" color="blue-gray" className="-mb-3 font-medium">
               Your email
@@ -113,16 +123,32 @@ export function SignIn() {
             </Typography>
           </div>
           <div className="space-y-4 mt-8">
-            <Button size="lg" color="white" className="flex items-center gap-2 justify-center shadow-md" fullWidth>
-              <svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <Button
+              size="lg"
+              color="white"
+              className="flex items-center gap-2 justify-center shadow-md"
+              fullWidth
+            >
+              <svg
+                width="17"
+                height="16"
+                viewBox="0 0 17 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 {/* SVG Path */}
               </svg>
               <span>Sign in With Google</span>
             </Button>
           </div>
-          <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
+          <Typography
+            variant="paragraph"
+            className="text-center text-blue-gray-500 font-medium mt-4"
+          >
             Not registered?
-            <Link to="/sign-up" className="text-gray-900 ml-1">Create account</Link>
+            <Link to="/sign-up" className="text-gray-900 ml-1">
+              Create account
+            </Link>
           </Typography>
         </form>
       </div>

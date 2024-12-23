@@ -9,10 +9,13 @@ export function SignUp() {
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
 
+  // Base URL from environment variables
+  const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("https://iot-studio.onrender.com/auth/signup", {
+      const response = await fetch(`${BASE_URL}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
