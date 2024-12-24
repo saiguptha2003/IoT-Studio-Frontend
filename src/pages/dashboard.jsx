@@ -46,6 +46,12 @@ const services = [
     path: "/security",
     icon: ShieldCheckIcon,
   },
+  {
+    name: "IOT Connect",
+    description: "Connect to IOT",
+    path: "/iotconnect",
+    icon: ShieldCheckIcon,
+  },
 ];
 
 function Dashboard() {
@@ -90,11 +96,11 @@ function Dashboard() {
                   </Typography>
                 </CardBody>
                 <CardFooter className="flex justify-end">
-                  <Link to={service.path}>
-                    <Button variant="filled" color="black" className="text-white hover:bg-black">
-                      View Service
-                    </Button>
-                  </Link>
+                    <a href={service.path} target="_blank" rel="noopener noreferrer">
+                      <Button variant="filled" color="black" className="text-white hover:bg-black">
+                        View Service
+                      </Button>
+                    </a>
                 </CardFooter>
               </Card>
             ))}

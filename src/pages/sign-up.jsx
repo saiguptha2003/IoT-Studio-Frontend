@@ -10,12 +10,12 @@ export function SignUp() {
   const navigate = useNavigate();
 
   // Base URL from environment variables
-  const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${BASE_URL}/auth/signup`, {
+      const response = await fetch(`${API_URL}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

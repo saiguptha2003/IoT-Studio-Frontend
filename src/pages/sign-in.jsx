@@ -24,7 +24,7 @@ export function SignIn() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/signin`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

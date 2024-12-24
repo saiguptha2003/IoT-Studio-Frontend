@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Navbar } from "@/widgets/layout";
 import routes from "@/routes";
 import { useEffect, useState } from "react";
+import IoTConnect from "./pages/iotconnect";
 
 function App() {
   const { pathname } = useLocation();
@@ -21,7 +22,7 @@ function App() {
   }
 
   // Redirect to dashboard if token exists
-  if (authToken && pathname !== "/dashboard") {
+  if (authToken && pathname === "/home") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -38,6 +39,7 @@ function App() {
             element && <Route key={key} exact path={path} element={element} />
         )}
         <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="/iotconnect" element={<IoTConnect></IoTConnect>} />
       </Routes>
     </>
   );
