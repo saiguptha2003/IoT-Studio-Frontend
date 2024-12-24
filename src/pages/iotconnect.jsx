@@ -11,7 +11,7 @@ import {
   DialogFooter,
   Input,
 } from "@material-tailwind/react";
-import { TrashIcon } from "@heroicons/react/24/solid";
+import { LinkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 const IoTConnect = () => {
   const navigate = useNavigate();
@@ -156,9 +156,16 @@ const IoTConnect = () => {
     <div className="flex h-screen overflow-hidden">
       <div className="pt-4 w-64 bg-black text-white flex flex-col z-10">
         <div className="p-4 mb-5">
-          <Button variant="gradient" color="green" type="button" onClick={handleCreateConnection}>
-            Create Connection
-          </Button>
+        <Button
+          variant="gradient"
+          color="green"
+          type="button"
+          onClick={handleCreateConnection}
+          className="flex items-center gap-2"
+        >
+          <LinkIcon className="w-5 h-5" />
+          Create Connection
+        </Button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {connections.map((connection) => (
@@ -303,7 +310,7 @@ const IoTConnect = () => {
         <DialogFooter>
           <Button
             variant="text"
-            color="blue"
+            color="black"
             onClick={handleCloseModal}
             className="mr-1"
           >
