@@ -129,7 +129,7 @@ export function Navbar({ brandName, routes }) {
           <Button
             color="transparent"
             onClick={handleLogout}
-            className="flex items-center gap-1 p-1 font-bold hover:bg-transparent hover:text-red-700"
+            className="flex items-center gap-1 p-2 font-bold hover:bg-transparent hover:text-red-700"
           >
             Logout
           </Button>

@@ -16,6 +16,7 @@ import {
   IconButton,
 } from "@material-tailwind/react";
 import { LinkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/solid";
+import Iotconnectdetail from "./iotconnectdetail";
 
 const IoTConnect = () => {
   const navigate = useNavigate();
@@ -38,6 +39,8 @@ const IoTConnect = () => {
     typeof_connection: "online",
   });
   const [ShowDetails, setShowDetails] = useState(false);
+  const [startConnection, setStartConnection] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (!authToken) {
@@ -157,6 +160,16 @@ const IoTConnect = () => {
     }
   };
 
+  const handleConnectDisconnect = () => {
+    if (isConnected) {
+      setStartConnection(false);
+      setIsConnected(false);
+    } else {
+      setStartConnection(true);
+      setIsConnected(true);
+    }
+  };
+
   // TrashIcon component
 function TrashIcon() {
   return (
@@ -202,7 +215,7 @@ function TrashIcon() {
             <ListItemSuffix>
               <IconButton
                 variant="text"
-                color="red"
+                color="white"
                 onClick={(e) => {
                   e.stopPropagation(); // Prevents triggering onClick of the list item when clicking the trash icon
                   handleDeleteConnection(connection.connection_id);
@@ -234,12 +247,12 @@ function TrashIcon() {
         >
           {selectedConnection.connection_name}
         </Typography>
-        <div className="flex flex-wrap items-center space-x-8">
+        <div className="flex items-center space-x-8">
           <Typography className="text-black text-base">
             <strong>Description:</strong> {selectedConnection.connection_description}
           </Typography>
           <Typography className="text-black text-base">
-            <strong>URL:</strong> {selectedConnection.connection_url}
+            <strong>Broker url:</strong> {selectedConnection.connection_url}
           </Typography>
           <Typography className="text-black text-base">
             <strong>Subscription Topic:</strong> {selectedConnection.subscribe_topic}
@@ -247,13 +260,14 @@ function TrashIcon() {
         </div>
       </div>
       <div className="flex items-center space-x-6">
-        <Button
+        <button
           variant="gradient"
           color="black"
-          className="text-white px-6 py-2"
+          className="px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-green-600 transition"
+          onClick={handleConnectDisconnect}
         >
-          Connect
-        </Button>
+          {isConnected ? "Disconnect" : "Connect"}
+        </button>
         <div className="relative">
           <button
             className="p-3 rounded-full hover:bg-gray-200"
@@ -300,6 +314,7 @@ function TrashIcon() {
       </div>
     </div>
   </CardBody>
+  <Iotconnectdetail connection={selectedConnection} startConnection={startConnection} />
 </Card>
   ) : (
     <Typography className="text-black text-center text-lg">
