@@ -3,6 +3,9 @@ import { Navbar } from "@/widgets/layout";
 import routes from "@/routes";
 import { useEffect, useState } from "react";
 import IoTConnect from "./pages/iotconnect";
+import Dataview from "./pages/dataview";
+import Smartml from "./pages/smartml";
+import SecureStore from "./pages/SecureStore";
 
 function App() {
   const { pathname } = useLocation();
@@ -40,6 +43,9 @@ function App() {
         )}
         <Route path="*" element={<Navigate to="/home" replace />} />
         <Route path="/iotconnect" element={<IoTConnect></IoTConnect>} />
+        <Route path="/dataview" element={<Dataview></Dataview>} />
+        <Route path="/smartml" element={<Smartml></Smartml>} />
+        <Route path="/securestore" element={<SecureStore></SecureStore>} />
       </Routes>
     </>
   );

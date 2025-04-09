@@ -13,13 +13,14 @@ import {
   BoltIcon,
   DevicePhoneMobileIcon,
   ShieldCheckIcon,
+  LightBulbIcon, // Import new icon
 } from "@heroicons/react/24/solid";
 
 const services = [
   {
-    name: "Temperature Monitoring",
-    description: "Track and monitor temperature data in real-time.",
-    path: "/temperature",
+    name: "Secure Store",
+    description: "Storing and handling Secure Data.",
+    path: "/securestore",
     icon: FireIcon,
   },
   {
@@ -35,22 +36,22 @@ const services = [
     icon: BoltIcon,
   },
   {
-    name: "Device Management",
-    description: "Manage and control all IoT devices.",
-    path: "/devices",
+    name: "Data View",
+    description: "Visualize and analyze data.",
+    path: "/dataview",
     icon: DevicePhoneMobileIcon,
-  },
-  {
-    name: "Security Alerts",
-    description: "Receive real-time security alerts and notifications.",
-    path: "/security",
-    icon: ShieldCheckIcon,
   },
   {
     name: "IOT Connect",
     description: "Connect to IOT",
     path: "/iotconnect",
     icon: ShieldCheckIcon,
+  },
+  {
+    name: "Smart ML",
+    description: "Leverage machine learning for smart predictions and insights.",
+    path: "/smartml",
+    icon: LightBulbIcon, // Use new icon
   },
 ];
 

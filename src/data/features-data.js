@@ -1,28 +1,36 @@
 import {
   ChatBubbleBottomCenterTextIcon,
+  LightBulbIcon, // Import new icon
 } from "@heroicons/react/24/solid";
 
 export const featuresData = [
   {
     color: "gray",
-    title: "Feature 1",
+    title: "IoT Connect",
     icon: ChatBubbleBottomCenterTextIcon,
     description:
-      "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae doloremque odit sapiente voluptates omnis assumenda hic quod dolorum tempore libero cupiditate exercitationem.",
+      "Connect and manage your IoT devices seamlessly with our IoT Connect feature. Ensure real-time data flow and device control.",
   },
   {
     color: "gray",
-    title: "Feature 2",
+    title: "Data View",
     icon: ChatBubbleBottomCenterTextIcon,
     description:
-      "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae doloremque odit sapiente voluptates omnis assumenda hic quod dolorum tempore libero cupiditate exercitationem.",
+      "Visualize and analyze your data with our Data View feature. Upload CSV files and generate interactive charts for better insights.",
   },
   {
     color: "gray",
-    title: "Feature 3",
+    title: "Warehouse",
     icon: ChatBubbleBottomCenterTextIcon,
     description:
-      "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae doloremque odit sapiente voluptates omnis assumenda hic quod dolorum tempore libero cupiditate exercitationem.",
+      "Manage your inventory and warehouse operations efficiently. Track stock levels, orders, and shipments in real-time.",
+  },
+  {
+    color: "gray",
+    title: "Smart ML",
+    icon: LightBulbIcon,
+    description:
+      "Leverage machine learning for smart predictions and insights. Enhance your decision-making with advanced analytics.",
   },
 ];
 

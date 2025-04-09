@@ -21,9 +21,6 @@ export function Home() {
               >
                 Check out our IOT Dashboard Services.
               </Typography>
-              <Typography variant="lead" color="white" className="opacity-80">
-                Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae doloremque odit sapiente voluptates omnis assumenda hic quod dolorum tempore libero cupiditate exercitationem.
-              </Typography>
             </div>
           </div>
         </div>
