@@ -29,6 +29,15 @@ function SecureStore() {
     });
     const [createError, setCreateError] = useState('');
 
+    // Create Secure ID modal state
+    const [isCreateSecureIdModalOpen, setIsCreateSecureIdModalOpen] = useState(false);
+    const [newSecureId, setNewSecureId] = useState({
+        secureid_name: '',
+        description: '',
+        type_of_id: 'int',
+    });
+    const [createSecureIdError, setCreateSecureIdError] = useState('');
+
     const auth = localStorage.getItem("authToken");
 
     useEffect(() => {
@@ -43,7 +52,7 @@ function SecureStore() {
                     name: token.token_name,
                     id: token.id,
                     description: token.description,
-                    creationDate: new Date(token.created_at * 1000)
+                    creationDate: new Date(token.created_at)
                         .toISOString()
                         .split("T")[0],
                     expiryDate: token.expire_date_time.split("T")[0],
@@ -70,12 +79,10 @@ function SecureStore() {
                     secure_id: token.secure_id,
                     type_of_id: token.type_of_id,
                     description: token.description,
-                    created_at: new Date(token.created_at * 1000)
-                        .toISOString()
-                        .split("T")[0],
+                    created_at: token.created_at.split(" ")[0],
                     id: token.id,
                 }));
-
+                
                 setSecureIds(secureIdsData);
                 setFilteredSecureIds(secureIdsData);
             } catch (error) {
@@ -179,7 +186,6 @@ function SecureStore() {
 
             const payload = {
                 ...newToken,
-                // Send the datetime-local value as is, without converting to ISO string
                 expire_date_time: newToken.expire_date_time,
                 nbytes: parseInt(newToken.nbytes),
                 type_of_token: newToken.type_of_token || 'hex'
@@ -216,6 +222,49 @@ function SecureStore() {
         } catch (error) {
             console.error("Error creating token:", error);
             setCreateError(error.response?.data?.error || 'Failed to create token. Please try again.');
+        }
+    };
+
+    const handleCreateSecureId = async (e) => {
+        e.preventDefault();
+        try {
+            // Validate required fields
+            if (!newSecureId.secureid_name.trim()) {
+                setCreateSecureIdError('Secure ID name is required');
+                return;
+            }
+            if (!newSecureId.description.trim()) {
+                setCreateSecureIdError('Description is required');
+                return;
+            }
+
+            const response = await axios.post(
+                "http://127.0.0.1:5001/services/SecureStore/createSecureId",
+                newSecureId,
+                { headers: { Authorization: `Bearer ${auth}` } }
+            );
+
+            const createdSecureId = {
+                secureid_name: response.data.entry.secureid_name,
+                secure_id: response.data.entry.secure_id,
+                type_of_id: response.data.entry.type_of_id,
+                description: response.data.entry.description,
+                created_at: response.data.entry.created_at.split(" ")[0],
+                id: response.data.entry.id,
+            };
+
+            setSecureIds([...secureIds, createdSecureId]);
+            setFilteredSecureIds([...filteredSecureIds, createdSecureId]);
+            setIsCreateSecureIdModalOpen(false);
+            setNewSecureId({
+                secureid_name: '',
+                description: '',
+                type_of_id: 'int',
+            });
+            setCreateSecureIdError('');
+        } catch (error) {
+            console.error("Error creating secure ID:", error);
+            setCreateSecureIdError(error.response?.data?.error || 'Failed to create secure ID. Please try again.');
         }
     };
 
@@ -256,7 +305,12 @@ function SecureStore() {
                             onChange={(e) => setSecureIdSearch(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                         />
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">Create Secure ID</button>
+                        <button 
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                            onClick={() => setIsCreateSecureIdModalOpen(true)}
+                        >
+                            Create Secure ID
+                        </button>
                     </div>
                 </div>
                 <TokenTable2 tokens={filteredSecureIds} onDelete={(id) => openDeleteModal(id, "secureId")} />
@@ -329,6 +383,68 @@ function SecureStore() {
                                 <button
                                     type="button"
                                     onClick={() => setIsCreateTokenModalOpen(false)}
+                                    className="px-4 py-2 bg-gray-300 rounded-lg"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Secure ID Modal */}
+            {isCreateSecureIdModalOpen && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h2 className="text-xl font-bold mb-4">Create New Secure ID</h2>
+                        {createSecureIdError && <p className="text-red-500 mb-4">{createSecureIdError}</p>}
+                        <form onSubmit={handleCreateSecureId}>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Secure ID Name</label>
+                                <input
+                                    type="text"
+                                    name="secureid_name"
+                                    value={newSecureId.secureid_name}
+                                    onChange={(e) => setNewSecureId({...newSecureId, secureid_name: e.target.value})}
+                                    required
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <textarea
+                                    name="description"
+                                    value={newSecureId.description}
+                                    onChange={(e) => setNewSecureId({...newSecureId, description: e.target.value})}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    required
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">ID Type</label>
+                                <select
+                                    name="type_of_id"
+                                    value={newSecureId.type_of_id}
+                                    onChange={(e) => setNewSecureId({...newSecureId, type_of_id: e.target.value})}
+                                    required
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                >
+                                    <option value="int">Integer</option>
+                                    <option value="string">String</option>
+                                    <option value="uuid">UUID</option>
+                                </select>
+                            </div>
+                            <div className="flex justify-end space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateSecureIdModalOpen(false)}
                                     className="px-4 py-2 bg-gray-300 rounded-lg"
                                 >
                                     Cancel
