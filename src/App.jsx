@@ -6,6 +6,7 @@ import IoTConnect from "./pages/iotconnect";
 import Dataview from "./pages/dataview";
 import Smartml from "./pages/smartml";
 import SecureStore from "./pages/SecureStore";
+import ChatbotWidget from "./components/ChatBot";
 
 function App() {
   const { pathname } = useLocation();
@@ -47,6 +48,7 @@ function App() {
         <Route path="/smartml" element={<Smartml></Smartml>} />
         <Route path="/securestore" element={<SecureStore></SecureStore>} />
       </Routes>
+      <ChatbotWidget/>
     </>
   );
 }
