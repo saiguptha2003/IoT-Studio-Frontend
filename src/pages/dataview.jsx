@@ -130,7 +130,7 @@ const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove
   
   const getChartIcon = () => {
     switch(type) {
-      case 'line': return <PresentationChartLineIcon className="w-5 h-5 text-blue-500" />;
+      case 'line': return <PresentationChartLineIcon className="w-5 h-5 text-blue-900" />;
       case 'bar': return <ChartBarIcon className="w-5 h-5 text-green-500" />;
       case 'pie': 
       case 'doughnut': return <ChartPieIcon className="w-5 h-5 text-purple-500" />;
@@ -278,7 +278,7 @@ const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove
             {Object.entries(data).map(([key, value], i) => (
               <div key={i} className="p-4 rounded-xl flex flex-col items-center justify-center transition-all duration-300" 
                 style={{
-                  background: `linear-gradient(135deg, ${CHART_COLORS[i % CHART_COLORS.length]}, rgba(255,255,255,0.9))`,
+                  background: `linear-gradient(135deg, ${CHART_COLORS[i % CHART_COLORS.length]}, rgba(30, 64, 175, 0.9))`,
                   boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
                 }}
               >
@@ -341,7 +341,7 @@ const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove
           </div>
           <div className="flex items-center gap-1">
             <MTooltip content={isConfiguring ? "Hide Configuration" : "Configure Widget"}>
-              <IconButton size="sm" variant="text" color="blue" 
+              <IconButton size="sm" variant="text" color="blue-900" 
                 onClick={() => onConfigureWidget(id, !isConfiguring)}>
                 {isConfiguring ? <EyeIcon className="h-4 w-4" /> : <AdjustmentsHorizontalIcon className="h-4 w-4" />}
               </IconButton>
@@ -372,8 +372,8 @@ const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove
           </div>
         </CardBody>
         {isConfiguring && (
-          <CardFooter className="p-3 bg-blue-50 border-t">
-            <Typography variant="small" className="text-blue-800">
+          <CardFooter className="p-3 bg-blue-900/10 border-t">
+            <Typography variant="small" className="text-blue-900">
               Drag to reposition • Click resize to change widget size
             </Typography>
           </CardFooter>
@@ -476,7 +476,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
 
   return (
     <Card className="shadow-lg mb-8 overflow-hidden">
-      <CardHeader floated={false} shadow={false} className="bg-blue-50">
+      <CardHeader floated={false} shadow={false} className="bg-blue-900/10">
         <Tabs value={activeTab} onChange={(value) => setActiveTab(value)}>
           <Tab value={0} className="p-3">Basic</Tab>
           <Tab value={1} className="p-3">Advanced</Tab>
@@ -517,7 +517,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                     onClick={() => setChartType(chart.value)}
                     className={`p-2 rounded-md border flex flex-col items-center justify-center gap-1 ${
                       chartType === chart.value 
-                        ? 'border-blue-500 bg-blue-50 text-blue-500' 
+                        ? 'border-blue-900 bg-blue-900/10 text-blue-900' 
                         : 'border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -597,7 +597,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={chartOptions.stacked}
                       onChange={() => setChartOptions({...chartOptions, stacked: true})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">Yes</span>
                   </label>
@@ -606,7 +606,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={!chartOptions.stacked}
                       onChange={() => setChartOptions({...chartOptions, stacked: false})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">No</span>
                   </label>
@@ -623,7 +623,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={chartOptions.fill}
                       onChange={() => setChartOptions({...chartOptions, fill: true})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">Yes</span>
                   </label>
@@ -632,7 +632,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={!chartOptions.fill}
                       onChange={() => setChartOptions({...chartOptions, fill: false})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">No</span>
                   </label>
@@ -652,7 +652,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                     type="radio"
                     checked={chartOptions.showLegend}
                     onChange={() => setChartOptions({...chartOptions, showLegend: true})}
-                    className="form-radio h-4 w-4 text-blue-500"
+                    className="form-radio h-4 w-4 text-blue-900"
                   />
                   <span className="ml-2 text-sm">Show</span>
                 </label>
@@ -661,7 +661,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                     type="radio"
                     checked={!chartOptions.showLegend}
                     onChange={() => setChartOptions({...chartOptions, showLegend: false})}
-                    className="form-radio h-4 w-4 text-blue-500"
+                    className="form-radio h-4 w-4 text-blue-900"
                   />
                   <span className="ml-2 text-sm">Hide</span>
                 </label>
@@ -692,7 +692,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={chartOptions.showGrid}
                       onChange={() => setChartOptions({...chartOptions, showGrid: true})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">Show</span>
                   </label>
@@ -701,7 +701,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
                       type="radio"
                       checked={!chartOptions.showGrid}
                       onChange={() => setChartOptions({...chartOptions, showGrid: false})}
-                      className="form-radio h-4 w-4 text-blue-500"
+                      className="form-radio h-4 w-4 text-blue-900"
                     />
                     <span className="ml-2 text-sm">Hide</span>
                   </label>
@@ -714,7 +714,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
         <div className="mt-6 flex justify-end">
           <Button 
             variant="gradient" 
-            color="blue" 
+            color="blue-900" 
             onClick={handleAddWidget}
             className="flex items-center gap-2"
           >
@@ -730,7 +730,7 @@ const WidgetConfigurator = ({ rawData, columns, addWidget }) => {
 const DashboardLayout = ({ children, isConfiguring }) => {
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 transition-all duration-300 ${
-      isConfiguring ? 'bg-blue-50/50 p-4 rounded-lg border-2 border-dashed border-blue-200' : ''
+      isConfiguring ? 'bg-blue-900/10 p-4 rounded-lg border-2 border-dashed border-blue-900' : ''
     }`}>
       {children}
     </div>
@@ -985,7 +985,7 @@ const Dataview = () => {
   return (
     <>
       <div className="relative flex h-[40vh] content-center items-center justify-center pt-20"> 
-        <div className="absolute top-0 h-full w-full bg-[url('/img/background-3.png')] w-[110vw] bg-cover bg-center" />
+        <div className="absolute top-0 h-full w-full bg-[url('/img/background-3.png')] !w-[110vw] bg-cover bg-center" />
         <div className="absolute top-0 h-full w-full bg-gradient-to-b from-black to-blue-900/80" />
         <div className="max-w-8xl container relative mx-auto text-center px-4"> 
           <Typography variant="h1" color="white" className="mb-8 font-black text-5xl"> 
@@ -1000,12 +1000,12 @@ const Dataview = () => {
       <section className="-mt-5 bg-gray-50 px-4 pb-20">
         <div className="container mx-auto">
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 mb-8 overflow-hidden">
-            <CardHeader color="blue" className="relative h-16 mt-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-400"></div>
+            <CardHeader color="blue-900" className="relative h-16 mt-10">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-blue-800"></div>
               <div className="w-full absolute bottom-0 flex justify-between items-center p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-white rounded-full p-2 shadow-md">
-                    <PresentationChartLineIcon className="w-5 h-5 text-blue-500" />
+                    <PresentationChartLineIcon className="w-5 h-5 text-blue-900" />
                   </div>
                   <input 
                     type="text" 
@@ -1031,13 +1031,13 @@ const Dataview = () => {
                     <Button
                       size="sm"
                       variant="filled"
-                      className="bg-white text-blue-500 shadow-md flex items-center gap-1"
+                      className="bg-white text-blue-900 shadow-md flex items-center gap-1"
                       onClick={handleSaveDashboard}
                       disabled={isSaving}
                     >
                       {isSaving ? (
                         <>
-                          <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-4 w-4 text-blue-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -1067,7 +1067,7 @@ const Dataview = () => {
                 />
                 <Button
                   variant="gradient"
-                  color="blue"
+                  color="blue-900"
                   className="flex items-center gap-2 shadow-md"
                   onClick={handleButtonClick}
                   disabled={isSaving}
@@ -1104,7 +1104,7 @@ const Dataview = () => {
                     ) : (
                       <Button
                         variant="outlined"
-                        color="blue"
+                        color="blue-900"
                         className="flex items-center gap-2 shadow-sm"
                         onClick={() => setIsAddingWidget(true)}
                       >
@@ -1157,7 +1157,7 @@ const Dataview = () => {
                 </DndProvider>
               ) : (
                 rawData && (
-                  <Alert color="blue" className="mb-6 border border-blue-100 shadow-sm">
+                  <Alert color="blue-900" className="mb-6 border border-blue-900/10 shadow-sm">
                     No widgets added yet. Click "Add Widget" to create your dashboard.
                   </Alert>
                 )
@@ -1166,7 +1166,7 @@ const Dataview = () => {
               {!rawData && !error && (
                 <div className="flex flex-col items-center justify-center py-20">
                   <div className="text-center mb-8">
-                    <PresentationChartLineIcon className="w-16 h-16 text-blue-200 mx-auto mb-4" />
+                    <PresentationChartLineIcon className="w-16 h-16 text-blue-900/20 mx-auto mb-4" />
                     <Typography className="text-gray-700 text-xl font-semibold">
                       Upload a CSV file to create your dashboard
                     </Typography>
@@ -1176,7 +1176,7 @@ const Dataview = () => {
                   </div>
                   <Button
                     variant="gradient" 
-                    color="blue"
+                    color="blue-900"
                     size="lg"
                     className="flex items-center gap-2 shadow-md"
                     onClick={handleButtonClick}
@@ -1220,7 +1220,7 @@ const Dataview = () => {
                     <Button 
                       variant="text" 
                       size="sm" 
-                      color="blue"
+                      color="blue-900"
                       className="flex items-center gap-1"
                       onClick={handleSaveDashboard}
                     >
