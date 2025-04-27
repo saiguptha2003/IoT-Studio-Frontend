@@ -4,13 +4,12 @@ import {
   CardBody,
   Typography,
   Button,
-  Select,
-  Option,
   Input,
   Alert,
 } from "@material-tailwind/react";
 import { BeakerIcon, ArrowUpTrayIcon, CogIcon } from "@heroicons/react/24/solid";
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const Training = () => {
   const [file, setFile] = useState(null);
@@ -22,14 +21,27 @@ const Training = () => {
   const [selectedModel, setSelectedModel] = useState('');
   const [modelParams, setModelParams] = useState({});
   const [trainingResult, setTrainingResult] = useState(null);
+  const [title, setTitle] = useState('');
 
+
+  const authToken = localStorage.getItem("authToken");
   useEffect(() => {
     // Fetch datasets and models
     const fetchData = async () => {
       try {
-        const datasetsResponse = await axios.get('/api/datasets');
+        // const datasetsResponse = await axios.get('/api/services/SmartML/getDatasets');
+        const datasetsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/services/SmartML/getDatasets`, {
+          headers: {
+            "Authorization": authToken,
+          },
+        });
         setDatasets(datasetsResponse.data);
-        const modelsResponse = await axios.get('/api/models');
+        // const modelsResponse = await axios.get('/api/services/SmartML/mlModels');
+        const modelsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/services/SmartML/mlModels`, {
+          headers: {
+            "Authorization": authToken,
+          },
+        });
         setAvailableModels(modelsResponse.data);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -49,10 +61,18 @@ const Training = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      await axios.post('/api/upload', formData);
+      await axios.post(`${import.meta.env.VITE_API_URL}/services/SmartML/dataset/upload`, formData, {
+        headers: {
+          "Authorization": authToken,
+        }
+      });
       setFile(null);
       // Refresh datasets
-      const datasetsResponse = await axios.get('/api/datasets');
+      const datasetsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/services/SmartML/getDatasets`, {
+        headers: {
+          "Authorization": authToken,
+        },
+      });
       setDatasets(datasetsResponse.data);
     } catch (error) {
       setUploadError('Failed to upload file');
@@ -79,12 +99,18 @@ const Training = () => {
   const handleTrain = async () => {
     if (!selectedDataset || !selectedModel) return;
     try {
-      const response = await axios.post('/api/train', {
-        dataset: selectedDataset,
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/services/SmartML/mlTrain`, {
+        datasetId: selectedDataset,
         model: selectedModel,
+        title: title,
         parameters: modelParams,
+      }, {
+        headers: {
+          "Authorization": authToken
+        }
       });
       setTrainingResult(response.data);
+      toast.success('ML Training Complete');
     } catch (error) {
       console.error('Error training model:', error);
     }
@@ -141,68 +167,102 @@ const Training = () => {
       </Card>
 
       {/* Train Model Card */}
+      
       <Card className="shadow-lg hover:shadow-xl transition-shadow bg-white">
-        <CardBody className="p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <CogIcon className="w-8 h-8 text-black" />
-            <Typography variant="h4" className="font-bold text-black">
-              Train Model
-            </Typography>
+  <CardBody className="p-8">
+    <div className="flex items-center gap-4 mb-6">
+      <CogIcon className="w-8 h-8 text-black" />
+      <Typography variant="h4" className="font-bold text-black">
+        Train Model
+      </Typography>
+    </div>
+    <div className="space-y-4">
+      {/* Title Input */}
+      <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Training Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              placeholder="Enter model title"
+            />
           </div>
-          <div className="space-y-4">
-            <Select
-              label="Select Dataset"
-              value={selectedDataset}
-              onChange={(value) => setSelectedDataset(value)}
-            >
-              {datasets.map((dataset) => (
-                <Option key={dataset} value={dataset}>
-                  {dataset}
-                </Option>
-              ))}
-            </Select>
+      {/* Dataset Selection - Unchanged */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Select Dataset
+        </label>
+        <select
+          value={selectedDataset}
+          onChange={(e) => setSelectedDataset(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+        >
+          <option value="">Select a dataset</option>
+          {Array.isArray(datasets) && datasets.map((dataset) => (
+            <option key={dataset.uuid} value={dataset.uuid}>
+              {dataset.filename} - {new Date(dataset.timeStamp).toLocaleDateString()}
+            </option>
+          ))}
+        </select>
+      </div>
 
-            <Select
-              label="Select Model"
-              value={selectedModel}
-              onChange={(value) => handleModelChange({ target: { value } })}
-            >
-              {availableModels.map((model) => (
-                <Option key={model.name} value={model.name}>
-                  {model.name.replace(/_/g, ' ').toUpperCase()} - {model.type}
-                </Option>
-              ))}
-            </Select>
+      {/* Model Selection - Updated */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Select Model
+        </label>
+        <select
+          value={selectedModel}
+          onChange={handleModelChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+        >
+          <option value="">Select a model</option>
+          {Object.entries(availableModels).map(([key, model]) => (
+            <option key={key} value={key}>
+              {key.replace(/_/g, ' ').toUpperCase()} - {model.type}
+            </option>
+          ))}
+        </select>
+      </div>
 
-            {selectedModel && modelParams && Object.keys(modelParams).length > 0 && (
-              <div className="mt-4 p-4 border rounded-lg">
-                <Typography variant="h6" color="blue-gray" className="mb-4">
-                  Model Parameters
-                </Typography>
-                {Object.keys(modelParams).map((param) => (
-                  <Input
-                    key={param}
-                    label={param}
-                    name={param}
-                    onChange={handleParameterChange}
-                    className="mb-3"
-                  />
-                ))}
-              </div>
-            )}
-
-            <Button
-              variant="gradient"
-              color="black"
-              className="w-full"
-              disabled={!selectedDataset || !selectedModel}
-              onClick={handleTrain}
-            >
-              Train Model
-            </Button>
+      {/* Model Parameters - Updated */}
+      {selectedModel && availableModels[selectedModel]?.parameters && 
+        Object.keys(availableModels[selectedModel].parameters).length > 0 && (
+        <div className="mt-4 p-4 border rounded-lg">
+          <Typography variant="h6" color="blue-gray" className="mb-6">
+            Model Parameters
+          </Typography>
+          <div className="space-y-6">
+            {Object.entries(availableModels[selectedModel].parameters).map(([param, defaultValue]) => (
+              <Input
+                key={param}
+                label={`${param} (default: ${defaultValue})`}
+                name={param}
+                defaultValue={defaultValue}
+                onChange={handleParameterChange}
+                type={typeof defaultValue === 'number' ? 'number' : 'text'}
+              />
+            ))}
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      )}
+
+      <Button
+        variant="gradient"
+        color="black"
+        className="w-full"
+        disabled={!selectedDataset || !selectedModel}
+        onClick={handleTrain}
+      >
+        Train Model
+      </Button>
+    </div>
+  </CardBody>
+</Card>
+     
 
       {/* Training Results Card */}
       {trainingResult && (

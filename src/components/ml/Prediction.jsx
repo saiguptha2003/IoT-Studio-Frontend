@@ -9,19 +9,46 @@ import {
   Textarea,
   Alert,
 } from "@material-tailwind/react";
-import { CloudArrowUpIcon, DocumentTextIcon } from "@heroicons/react/24/solid";
+import { 
+  CloudArrowUpIcon, 
+  DocumentIcon, 
+  DocumentTextIcon,
+  ArrowDownTrayIcon 
+} from "@heroicons/react/24/outline";
 import axios from 'axios';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Prediction = () => {
-  const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState('');
-  const [predictionType, setPredictionType] = useState('direct');
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [predictionType, setPredictionType] = useState('input');
   const [file, setFile] = useState(null);
   const [directInput, setDirectInput] = useState('');
   const [predictions, setPredictions] = useState(null);
   const [trainedModels, setTrainedModels] = useState([]);
+  const [predictedFile, setPredictedFile] = useState(null);
+  const [downloadFileName, setDownloadFileName] = useState('');
+
+  const authToken = localStorage.getItem("authToken");
 
   const supportedFormats = '.csv, .xlsx, .xls';
+
+  const toastConfig = {
+    position: "top-right",
+    autoClose: 3000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme: "light",
+    style: {
+      backgroundColor: 'white',
+      color: 'black',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    }
+  };
 
   useEffect(() => {
     fetchModels();
@@ -29,8 +56,12 @@ const Prediction = () => {
 
    const fetchModels = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/models');
-      setTrainedModels(response.data.trained_models);
+      const modelsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/services/SmartML/mlTrain`, {
+        headers: {
+          "Authorization": authToken,
+        },
+      });
+      setTrainedModels(modelsResponse.data);
     } catch (error) {
       console.error('Error fetching models:', error);
     }
@@ -40,28 +71,48 @@ const Prediction = () => {
     try {
       if (predictionType === 'file' && file) {
         const formData = new FormData();
+        formData.append('type', 'file');
         formData.append('file', file);
-        formData.append('model', selectedModel);
-
-        const response = await axios.post('http://localhost:5000/predict/file', formData, {
-          responseType: 'blob',
-        });
-
-        // Create download link for the file
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'predictions.csv');
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        formData.append('trainId', selectedModel);
+        
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/services/SmartML/mlPredict`, 
+          formData, 
+          {
+            headers: {
+              "Authorization": authToken,
+              'Content-Type': 'multipart/form-data'
+            },
+            responseType: 'blob'
+          }
+        );
+  
+        // Create blob URL for preview/download
+        const blob = new Blob([response.data]);
+        const fileUrl = window.URL.createObjectURL(blob);
+        setPredictedFile(fileUrl);
+        
+        // Get filename from response headers
+        const contentDisposition = response.headers['content-disposition'];
+        const filenameMatch = contentDisposition && contentDisposition.match(/download_name="?([^"]+)"?/);
+        const filename = filenameMatch ? filenameMatch[1] : 'predicted-data.csv';
+        setDownloadFileName(filename);
+        
+        toast.success('Prediction file ready for download', toastConfig);
       } else {
-        const response = await axios.post('http://localhost:5000/predict', {
-          type: 'direct',
-          data: directInput,
-          model: selectedModel,
+        const formData = new FormData();
+        formData.append('type', predictionType);
+        formData.append('input_data', directInput);
+        formData.append('trainId', selectedModel);
+
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/services/SmartML/mlPredict`, formData, {
+          headers: {
+            "Authorization": authToken,
+            'Content-Type': 'multipart/form-data'
+          }
         });
         setPredictions(response.data.predictions);
+        toast.success('Prediction Successful', toastConfig);
       }
     } catch (error) {
       console.error('Error during prediction:', error);
@@ -80,24 +131,30 @@ const Prediction = () => {
         </div>
 
         <div className="space-y-6">
-          <Select
-            label="Select Model"
-            value={selectedModel}
-            onChange={(value) => setSelectedModel(value)}
-          >
-            {trainedModels.map((model) => (
-              <Option key={model} value={model}>
-                {model}
+        <Select
+          label="Select Model"
+          value={selectedModel}
+          onChange={(value) => setSelectedModel(value)}
+          className="text-black"
+          labelProps={{
+            className: "text-black"
+          }}
+        >
+          {trainedModels.map((model) => {
+            return (
+              <Option key={model.title} value={model.trainId}>
+                {model.title} - {model.model}
               </Option>
-            ))}
-          </Select>
+            );
+          })}
+        </Select>
 
           <div className="flex gap-4">
             <Button
-              variant={predictionType === 'direct' ? 'filled' : 'outlined'}
+              variant={predictionType === 'input' ? 'filled' : 'outlined'}
               color="black"
               className="flex-1"
-              onClick={() => setPredictionType('direct')}
+              onClick={() => setPredictionType('input')}
             >
               Direct Input
             </Button>
@@ -111,7 +168,7 @@ const Prediction = () => {
             </Button>
           </div>
 
-          {predictionType === 'direct' ? (
+          {predictionType === 'input' ? (
             <Textarea
               value={directInput}
               onChange={(e) => setDirectInput(e.target.value)}
@@ -147,7 +204,7 @@ const Prediction = () => {
             color="black"
             className="w-full"
             onClick={handlePredict}
-            disabled={!selectedModel || (predictionType === 'direct' ? !directInput : !file)}
+            disabled={!selectedModel || (predictionType === 'input' ? !directInput : !file)}
           >
             Make Prediction
           </Button>
@@ -160,6 +217,34 @@ const Prediction = () => {
               <pre className="bg-white p-4 rounded-lg overflow-auto text-sm">
                 {JSON.stringify(predictions, null, 2)}
               </pre>
+            </div>
+          )}
+          {predictedFile && (
+            <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+              <Typography variant="h6" color="blue-gray" className="mb-2">
+                Download Predictions:
+              </Typography>
+              <div className="bg-white p-4 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DocumentIcon className="w-6 h-6 text-black" />
+                  <span className="text-sm font-medium">{downloadFileName}</span>
+                </div>
+                <Button
+                  variant="gradient"
+                  color="black"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = predictedFile;
+                    link.download = downloadFileName;
+                    link.click();
+                  }}
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                  Download
+                </Button>
+              </div>
             </div>
           )}
         </div>

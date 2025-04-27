@@ -16,7 +16,7 @@ const Smartml = () => {
           <Typography variant="h1" color="white" className="mb-8 font-black text-5xl">
             Smart ML
           </Typography>
-          <Typography variant="lead" color="white" className="opacity-80 mb-6 text-xl">
+          <Typography variant="lead" color="white" className="opacity-80 mb-6 text-xl pb-12">
             Train and deploy machine learning models with ease
           </Typography>
         </div>
@@ -29,7 +29,7 @@ const Smartml = () => {
               <Tab 
                 value="training"
                 onClick={() => setActiveTab("training")}
-                className={activeTab === "training" ? "text-gray-900" : ""}
+                className={activeTab === "training" ? "text-gray-900" : "text-white"}
               >
                 <div className="flex items-center gap-2">
                   <BeakerIcon className="w-5 h-8" />
@@ -39,7 +39,7 @@ const Smartml = () => {
               <Tab
                 value="prediction"
                 onClick={() => setActiveTab("prediction")}
-                className={activeTab === "prediction" ? "text-gray-900" : ""}
+                className={activeTab === "prediction" ? "text-gray-900" : "text-white"}
               >
                 <div className="flex items-center gap-2">
                   <LightBulbIcon className="w-5 h-8" />
