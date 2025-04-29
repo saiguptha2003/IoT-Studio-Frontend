@@ -1,6 +1,5 @@
-import { Home, SignIn, SignUp, AboutUs, ContactUs, IDEPage} from "@/pages";
+import { Home, SignIn, SignUp, AboutUs, ContactUs} from "@/pages";
 import Dashboard from "./pages/dashboard";
-import { element } from "prop-types";
 // import AboutUs from "./pages/about-us"
 
 export const routes = [
@@ -32,12 +31,7 @@ export const routes = [
   {
     name: "Dashboard",
     path: "/dashboard",
-    element: <Dashboard></Dashboard>
-  },
-  {
-    name:"IDEPage",
-    path: "/idepage",
-    element: <IDEPage></IDEPage>
+    element: <Dashboard></Dashboard>,
   },
 ];
 
