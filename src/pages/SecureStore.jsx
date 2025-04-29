@@ -48,16 +48,21 @@ function SecureStore() {
                     { headers: { Authorization: `Bearer ${auth}` } }
                 );
 
-                const backendTokens = response.data.map((token) => ({
-                    name: token.token_name,
-                    id: token.id,
-                    description: token.description,
-                    creationDate: new Date(token.created_at)
-                        .toISOString()
-                        .split("T")[0],
-                    expiryDate: token.expire_date_time.split("T")[0],
-                    nBytes: token.nbytes,
-                }));
+                const backendTokens = response.data.map((token) => {
+                    const formatTimestamp = (timestamp) => {
+                        const date = new Date(parseFloat(timestamp) * 1000);
+                        return date.toISOString().replace("T", " ").split(".")[0]; // "YYYY-MM-DD HH:mm:ss"
+                    };
+
+                    return {
+                        name: token.token_name,
+                        id: token.id,
+                        description: token.description,
+                        creationDate: formatTimestamp(token.created_at),
+                        expiryDate: formatTimestamp(token.expire_date_time),
+                        nBytes: token.nbytes,
+                    };
+                });
 
                 setTokens(backendTokens);
                 setFilteredTokens(backendTokens);

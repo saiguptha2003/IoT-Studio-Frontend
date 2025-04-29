@@ -24,9 +24,9 @@ const services = [
     icon: FireIcon,
   },
   {
-    name: "Humidity Control",
+    name: "Warehouse",
     description: "Control and monitor humidity levels.",
-    path: "/humidity",
+    path: "/warehouse",
     icon: CloudIcon,
   },
   {

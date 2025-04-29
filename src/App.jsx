@@ -7,6 +7,10 @@ import Dataview from "./pages/dataview";
 import Smartml from "./pages/smartml";
 import SecureStore from "./pages/SecureStore";
 import ChatbotWidget from "./components/ChatBot";
+import Warehouse from "./pages/Warehouse";
+import TriggerFiles from "./pages/TriggerFiles";
+import ConnectFiles from "./pages/ConnectFiles";
+import StaticFiles from "./pages/StaticFiles";
 
 function App() {
   const { pathname } = useLocation();
@@ -47,6 +51,20 @@ function App() {
         <Route path="/dataview" element={<Dataview></Dataview>} />
         <Route path="/smartml" element={<Smartml></Smartml>} />
         <Route path="/securestore" element={<SecureStore></SecureStore>} />
+        <Route path="/warehouse" element={<Warehouse></Warehouse>} />
+                  {/* Warehouse routes */}
+          <Route path="/warehouse">
+            <Route path="trigger-files" element={
+                <TriggerFiles />
+            } />
+            <Route path="connect-files" element={
+                <ConnectFiles />
+            } />
+            <Route path="static-files" element={
+                <StaticFiles />
+            } />
+            {/* <Route path="customized-section/:sectionId" element={<CustomizedSection />} /> */}
+          </Route>
       </Routes>
       <ChatbotWidget/>
     </>
