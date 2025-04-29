@@ -29,7 +29,7 @@ const Prediction = () => {
 
    const fetchModels = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/models');
+      const response = await axios.get('http://localhost:5001/models');
       setTrainedModels(response.data.trained_models);
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -43,7 +43,7 @@ const Prediction = () => {
         formData.append('file', file);
         formData.append('model', selectedModel);
 
-        const response = await axios.post('http://localhost:5000/predict/file', formData, {
+        const response = await axios.post('http://localhost:5001/predict/file', formData, {
           responseType: 'blob',
         });
 
@@ -56,7 +56,7 @@ const Prediction = () => {
         link.click();
         link.remove();
       } else {
-        const response = await axios.post('http://localhost:5000/predict', {
+        const response = await axios.post('http://localhost:5001/predict', {
           type: 'direct',
           data: directInput,
           model: selectedModel,

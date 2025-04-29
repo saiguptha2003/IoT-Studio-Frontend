@@ -31,6 +31,7 @@ import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import Papa from 'papaparse';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import * as XLSX from 'xlsx'; // Add this import for Excel support
 
 // Register ChartJS components
 ChartJS.register(
@@ -93,7 +94,7 @@ const formatValue = (value) => {
 };
 
 // Widget component for various chart types
-const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove, onSizeChange, onMoveWidget, isConfiguring, onConfigureWidget }) => {
+const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove, onSizeChange, onMoveWidget, isConfiguring, onConfigureWidget, render }) => {
   const ref = useRef(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -142,6 +143,8 @@ const DashboardWidget = ({ id, type, data, title, columns, index, size, onRemove
 
   const renderChart = () => {
     switch (type) {
+      case 'custom':
+        return render ? render(data) : <p>Custom widget</p>;
       case 'line':
         return (
           <Line 
@@ -737,7 +740,17 @@ const DashboardLayout = ({ children, isConfiguring }) => {
   );
 };
 
+const BASE_URL = 'http://127.0.0.1:5001';
+
 const Dataview = () => {
+  const [fileCategories, setFileCategories] = useState({
+    connectFiles: [],
+    staticFiles: [],
+    triggerFiles: [],
+    selfComputeFiles: []
+  });
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [rawData, setRawData] = useState(null);
   const [columns, setColumns] = useState([]);
   const [widgets, setWidgets] = useState([]);
@@ -747,58 +760,149 @@ const Dataview = () => {
   const [configuringWidgetId, setConfiguringWidgetId] = useState(null);
   const [dashboardName, setDashboardName] = useState("My Dashboard");
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleButtonClick = () => {
-    fileInputRef.current.click();
+  const getHeaders = () => {
+    const authToken = localStorage.getItem('authToken');
+    return {
+      'Authorization': `${authToken}`,
+      'Content-Type': 'application/json'
+    };
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    setError('');
-    setWidgets([]);
-    
-    if (file) {
-      // Set dashboard name to the file name by default
-      const fileName = file.name.replace('.csv', '');
-      setDashboardName(`${fileName} Dashboard`);
-      
-      if (!file.name.endsWith('.csv')) {
-        setError('Please upload a valid CSV file');
-        return;
+  // Fetch available files on component mount
+  useEffect(() => {
+    fetchDashboardFiles();
+  }, []);
+
+  const fetchDashboardFiles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/services/DataView/dashboards/files`, {
+        headers: getHeaders()
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard files');
       }
+      const data = await response.json();
+      setFileCategories(data);
+    } catch (error) {
+      console.error('Error fetching dashboard files:', error);
+      setError('Failed to fetch dashboard files: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      setIsSaving(true);
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setSelectedFile(null);
+    setRawData(null);
+    setWidgets([]);
+  };
 
-      Papa.parse(file, {
+const handleFileSelect = async (file) => {
+  setSelectedFile(file);
+  setIsLoading(true);
+  setError('');
+
+  try {
+    // Determine the API endpoint based on file category
+    const endpoints = {
+      connectFiles: `${BASE_URL}/services/WareHouse/getConnectFile`,
+      triggerFiles: `${BASE_URL}/services/WareHouse/getTriggerFile`,
+      staticFiles: `${BASE_URL}/services/WareHouse/getStaticFile`,
+      selfComputeFiles: `${BASE_URL}/services/WareHouse/getSelfComputeFile`
+    };
+
+    const endpoint = `${endpoints[selectedCategory]}/${file.uuid}`;
+    const response = await fetch(endpoint, {
+      headers: getHeaders()
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch file data');
+    }
+
+    const blob = await response.blob();
+    const contentType = blob.type;
+    const fileExtension = file.filename.split('.').pop().toLowerCase();
+
+    // Handle different file types appropriately
+    if (contentType.includes('text/csv') || fileExtension === 'csv') {
+      // Process CSV files
+      const fileData = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsText(blob);
+      });
+
+      console.log("CSV fileData loaded");
+
+      // Parse CSV data
+      Papa.parse(fileData, {
         header: true,
         dynamicTyping: true,
         complete: (results) => {
-          setIsSaving(false);
-          
           if (results.errors.length > 0) {
-            setError('Error parsing CSV file');
+            console.error("CSV parsing errors:", results.errors);
+            setError('Error parsing CSV file data');
             return;
           }
 
           const parsedData = results.data.filter(row => {
-            // Filter out rows that are entirely empty
             return Object.values(row).some(value => value !== null && value !== '');
           });
-          
+
           if (parsedData.length === 0) {
             setError('No data found in CSV file');
             return;
           }
 
           setRawData(parsedData);
-          
+          setDashboardName(`${file.filename} Dashboard`);
+
           // Determine column types
           const headers = Object.keys(parsedData[0]);
           const detectedColumns = headers.map(header => {
             const sampleValues = parsedData.slice(0, 10).map(row => row[header]);
-            const isNumeric = sampleValues.every(value => typeof value === 'number');
-            
+            const isNumeric = sampleValues.every(value => 
+              typeof value === 'number' || (typeof value === 'string' && !isNaN(value))
+            );
+            return {
+              name: header,
+              type: isNumeric ? 'number' : 'string'
+            };
+          });
+
+          setColumns(detectedColumns);
+          createDefaultWidgets(parsedData, detectedColumns);
+        }
+      });
+    } else if (contentType.includes('application/json') || fileExtension === 'json') {
+      // Process JSON files
+      const fileData = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsText(blob);
+      });
+
+      try {
+        const parsedData = JSON.parse(fileData);
+        
+        // Handle array of objects (most common JSON data format)
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          setRawData(parsedData);
+          setDashboardName(`${file.filename} Dashboard`);
+          
+          // Determine column types from the first object
+          const headers = Object.keys(parsedData[0]);
+          const detectedColumns = headers.map(header => {
+            const sampleValues = parsedData.slice(0, 10).map(row => row[header]);
+            const isNumeric = sampleValues.every(value => 
+              typeof value === 'number' || (typeof value === 'string' && !isNaN(value))
+            );
             return {
               name: header,
               type: isNumeric ? 'number' : 'string'
@@ -806,123 +910,295 @@ const Dataview = () => {
           });
           
           setColumns(detectedColumns);
+          createDefaultWidgets(parsedData, detectedColumns);
+        } else {
+          // Handle object with nested data
+          setError('JSON file must contain an array of objects');
+        }
+      } catch (jsonError) {
+        console.error('Error parsing JSON:', jsonError);
+        setError('Failed to parse JSON file');
+      }
+    } else if (fileExtension === 'xlsx' || fileExtension === 'xls' || 
+               contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
+               contentType.includes('application/vnd.ms-excel')) {
+      // Process Excel files
+      try {
+        const arrayBuffer = await blob.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Get the first sheet
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to JSON with headers
+        const parsedData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (parsedData.length < 2) { // Need at least headers and one row
+          setError('Excel file contains insufficient data');
+          return;
+        }
+        
+        // Extract headers from first row
+        const headers = parsedData[0];
+        
+        // Convert the remaining rows to an array of objects
+        const dataObjects = parsedData.slice(1).map(row => {
+          const obj = {};
+          headers.forEach((header, index) => {
+            obj[header] = row[index];
+          });
+          return obj;
+        }).filter(row => Object.values(row).some(val => val !== undefined && val !== null && val !== ''));
+        
+        if (dataObjects.length === 0) {
+          setError('No usable data found in Excel file');
+          return;
+        }
+
+        setRawData(dataObjects);
+        setDashboardName(`${file.filename} Dashboard`);
+        
+        // Determine column types from data
+        const detectedColumns = headers.map(header => {
+          const sampleValues = dataObjects.slice(0, 10).map(row => row[header]);
+          const isNumeric = sampleValues.every(value => 
+            typeof value === 'number' || (typeof value === 'string' && !isNaN(value))
+          );
+          return {
+            name: header,
+            type: isNumeric ? 'number' : 'string'
+          };
+        });
+        
+        setColumns(detectedColumns);
+        createDefaultWidgets(dataObjects, detectedColumns);
+      } catch (excelError) {
+        console.error('Error parsing Excel file:', excelError);
+        setError('Failed to parse Excel file. Error: ' + excelError.message);
+      }
+    } else {
+      // For other file types that we can't visualize, provide a download option
+      const url = URL.createObjectURL(blob);
+      setError(`The file type '${fileExtension}' cannot be visualized. Use the download button below.`);
+      
+      // Create a temporary component with the download button
+      setWidgets([{
+        id: `download-${Date.now()}`,
+        type: 'custom',
+        title: `Download ${file.filename}`,
+        size: 'medium',
+        data: { fileUrl: url, fileName: file.filename },
+        render: (data) => (
+          <div className="flex flex-col items-center justify-center h-full p-6">
+            <div className="text-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-blue-900 mx-auto mb-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              <p className="text-xl font-semibold text-gray-700">Unable to visualize this file format</p>
+              <p className="text-gray-500 mt-2">Click the button below to download the file</p>
+            </div>
+            <Button 
+              color="blue"
+              size="lg"
+              className="mt-4"
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = data.fileUrl;
+                a.download = data.fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                <span>Download {data.fileName}</span>
+              </div>
+            </Button>
+          </div>
+        )
+      }]);
+
+      // Make sure to clean up the URL object when component unmounts or changes
+      useEffect(() => {
+        return () => {
+          if (url) URL.revokeObjectURL(url);
+        };
+      }, [url]);
+    }
+  } catch (error) {
+    console.error('Error loading file:', error);
+    setError('Failed to load file: ' + error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  const createDefaultWidgets = (parsedData, detectedColumns) => {
+    const defaultWidgets = [];
           
-          // Create default widgets
-          const defaultWidgets = [];
-          
-          // Line chart widget for first numeric column
-          const numericColumns = detectedColumns.filter(col => col.type === 'number');
-          const categoryColumn = detectedColumns.find(col => col.type === 'string') || detectedColumns[0];
-          
-          if (numericColumns.length > 0) {
-            // Line chart for time series data
-            const lineData = {
-              labels: parsedData.slice(0, 50).map(row => row[categoryColumn.name]),
-              datasets: [{
-                label: numericColumns[0].name,
-                data: parsedData.slice(0, 50).map(row => row[numericColumns[0].name]),
-                borderColor: CHART_BORDER_COLORS[0],
-                backgroundColor: CHART_COLORS[0].replace('0.7', '0.2'),
-                borderWidth: 1,
-                fill: true
-              }]
-            };
-            
-            defaultWidgets.push({
-              id: `widget-${Date.now()}`,
-              type: 'line',
-              data: lineData,
-              title: `${numericColumns[0].name} Trend`,
-              columns: [numericColumns[0].name],
-              size: 'medium'
-            });
-            
-            // Bar chart comparing values
-            if (numericColumns.length > 1) {
-              const barData = {
-                labels: parsedData.slice(0, 10).map(row => row[categoryColumn.name]),
-                datasets: [{
-                  label: numericColumns[1].name,
-                  data: parsedData.slice(0, 10).map(row => row[numericColumns[1].name]),
-                  backgroundColor: CHART_COLORS[1],
-                  borderColor: CHART_BORDER_COLORS[1],
-                  borderWidth: 1
-                }]
-              };
-              
-              defaultWidgets.push({
-                id: `widget-${Date.now() + 1}`,
-                type: 'bar',
-                data: barData,
-                title: `Top ${numericColumns[1].name} Values`,
-                columns: [numericColumns[1].name],
-                size: 'small'
-              });
-            }
-            
-            // Pie chart for distribution
-            if (numericColumns.length > 2) {
-              const pieData = {
-                labels: parsedData.slice(0, 6).map(row => row[categoryColumn.name]),
-                datasets: [{
-                  data: parsedData.slice(0, 6).map(row => row[numericColumns[2].name]),
-                  backgroundColor: CHART_COLORS.slice(0, 6),
-                  borderColor: CHART_BORDER_COLORS.slice(0, 6),
-                  borderWidth: 1
-                }]
-              };
-              
-              defaultWidgets.push({
-                id: `widget-${Date.now() + 2}`,
-                type: 'pie',
-                data: pieData,
-                title: `${numericColumns[2].name} Distribution`,
-                columns: [numericColumns[2].name],
-                size: 'small'
-              });
-            }
-            
-            // Summary metrics
-            const summaryData = {};
-            numericColumns.slice(0, 3).forEach((column, i) => {
-              const values = parsedData.map(row => row[column.name]).filter(val => !isNaN(val));
-              if (values.length > 0) {
-                summaryData[`${column.name} (Avg)`] = formatValue(values.reduce((a, b) => a + b, 0) / values.length);
-                summaryData[`${column.name} (Max)`] = formatValue(Math.max(...values));
-                summaryData[`${column.name} (Min)`] = formatValue(Math.min(...values));
-                summaryData[`${column.name} (Total)`] = formatValue(values.reduce((a, b) => a + b, 0));
-              }
-            });
-            
-            defaultWidgets.push({
-              id: `widget-${Date.now() + 3}`,
-              type: 'summary',
-              data: summaryData,
-              title: 'Key Metrics',
-              columns: numericColumns.slice(0, 2).map(col => col.name),
-              size: 'small'
-            });
-            
-            // Table view of data
-            defaultWidgets.push({
-              id: `widget-${Date.now() + 4}`,
-              type: 'table',
-              data: parsedData.slice(0, 100),
-              title: 'Data Table',
-              columns: headers,
-              size: 'medium'
-            });
-          }
-          
-          setWidgets(defaultWidgets);
-          setIsAddingWidget(false);
-          setIsConfiguring(false);
-        },
-        error: (error) => {
-          setIsSaving(false);
-          setError('Error reading CSV file: ' + error.message);
+    // Line chart widget for first numeric column
+    const numericColumns = detectedColumns.filter(col => col.type === 'number');
+    const categoryColumn = detectedColumns.find(col => col.type === 'string') || detectedColumns[0];
+    
+    if (numericColumns.length > 0) {
+      // Line chart for time series data
+      const lineData = {
+        labels: parsedData.slice(0, 50).map(row => row[categoryColumn.name]),
+        datasets: [{
+          label: numericColumns[0].name,
+          data: parsedData.slice(0, 50).map(row => row[numericColumns[0].name]),
+          borderColor: CHART_BORDER_COLORS[0],
+          backgroundColor: CHART_COLORS[0].replace('0.7', '0.2'),
+          borderWidth: 1,
+          fill: true
+        }]
+      };
+      
+      defaultWidgets.push({
+        id: `widget-${Date.now()}`,
+        type: 'line',
+        data: lineData,
+        title: `${numericColumns[0].name} Trend`,
+        columns: [numericColumns[0].name],
+        size: 'medium'
+      });
+      
+      // Bar chart comparing values
+      if (numericColumns.length > 1) {
+        const barData = {
+          labels: parsedData.slice(0, 10).map(row => row[categoryColumn.name]),
+          datasets: [{
+            label: numericColumns[1].name,
+            data: parsedData.slice(0, 10).map(row => row[numericColumns[1].name]),
+            backgroundColor: CHART_COLORS[1],
+            borderColor: CHART_BORDER_COLORS[1],
+            borderWidth: 1
+          }]
+        };
+        
+        defaultWidgets.push({
+          id: `widget-${Date.now() + 1}`,
+          type: 'bar',
+          data: barData,
+          title: `Top ${numericColumns[1].name} Values`,
+          columns: [numericColumns[1].name],
+          size: 'small'
+        });
+      }
+      
+      // Pie chart for distribution
+      if (numericColumns.length > 2) {
+        const pieData = {
+          labels: parsedData.slice(0, 6).map(row => row[categoryColumn.name]),
+          datasets: [{
+            data: parsedData.slice(0, 6).map(row => row[numericColumns[2].name]),
+            backgroundColor: CHART_COLORS.slice(0, 6),
+            borderColor: CHART_BORDER_COLORS.slice(0, 6),
+            borderWidth: 1
+          }]
+        };
+        
+        defaultWidgets.push({
+          id: `widget-${Date.now() + 2}`,
+          type: 'pie',
+          data: pieData,
+          title: `${numericColumns[2].name} Distribution`,
+          columns: [numericColumns[2].name],
+          size: 'small'
+        });
+      }
+      
+      // Summary metrics
+      const summaryData = {};
+      numericColumns.slice(0, 3).forEach((column, i) => {
+        const values = parsedData.map(row => row[column.name]).filter(val => !isNaN(val));
+        if (values.length > 0) {
+          summaryData[`${column.name} (Avg)`] = formatValue(values.reduce((a, b) => a + b, 0) / values.length);
+          summaryData[`${column.name} (Max)`] = formatValue(Math.max(...values));
+          summaryData[`${column.name} (Min)`] = formatValue(Math.min(...values));
+          summaryData[`${column.name} (Total)`] = formatValue(values.reduce((a, b) => a + b, 0));
         }
       });
+      
+      defaultWidgets.push({
+        id: `widget-${Date.now() + 3}`,
+        type: 'summary',
+        data: summaryData,
+        title: 'Key Metrics',
+        columns: numericColumns.slice(0, 2).map(col => col.name),
+        size: 'small'
+      });
+      
+      // Table view of data
+      defaultWidgets.push({
+        id: `widget-${Date.now() + 4}`,
+        type: 'table',
+        data: parsedData.slice(0, 100),
+        title: 'Data Table',
+        columns: detectedColumns.map(col => col.name),
+        size: 'medium'
+      });
+    }
+    
+    setWidgets(defaultWidgets);
+    setIsAddingWidget(false);
+    setIsConfiguring(false);
+  };
+
+  const handleSaveDashboard = async () => {
+    setIsSaving(true);
+    try {
+      const dashboardConfig = {
+        name: dashboardName,
+        file: {
+          file_id: selectedFile.uuid,
+          type_of_file: selectedCategory
+        },
+        widgets: widgets.map(widget => ({
+          id: widget.id,
+          type: widget.type,
+          title: widget.title,
+          columns: widget.columns,
+          size: widget.size,
+          options: widget.options || {}
+        })),
+        lastModified: new Date().toISOString()
+      };
+
+      const response = await fetch(`${BASE_URL}/api/dashboards`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(dashboardConfig)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save dashboard');
+      }
+
+      // Show success message
+      setError('');
+      const successMessage = document.createElement('div');
+      successMessage.innerHTML = `
+        <div class="fixed top-4 right-4 z-50">
+          <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg">
+            Dashboard saved successfully!
+          </div>
+        </div>
+      `;
+      document.body.appendChild(successMessage);
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error saving dashboard:', error);
+      setError('Failed to save dashboard: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -966,15 +1242,6 @@ const Dataview = () => {
     setConfiguringWidgetId(isConfiguring ? widgetId : null);
   };
 
-  const handleSaveDashboard = () => {
-    // In a real application, this would save the dashboard configuration to a server
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      // Show success message or redirect
-    }, 1000);
-  };
-  
   const toggleConfigMode = () => {
     setIsConfiguring(!isConfiguring);
     if (isConfiguring) {
@@ -985,7 +1252,7 @@ const Dataview = () => {
   return (
     <>
       <div className="relative flex h-[40vh] content-center items-center justify-center pt-20"> 
-        <div className="absolute top-0 h-full w-full bg-[url('/img/background-3.png')] !w-[110vw] bg-cover bg-center" />
+        <div className="absolute top-0 h-full !w-[110vw] bg-[url('/img/background-3.png')] bg-cover bg-center" />
         <div className="absolute top-0 h-full w-full bg-gradient-to-b from-black to-blue-900/80" />
         <div className="max-w-8xl container relative mx-auto text-center px-4"> 
           <Typography variant="h1" color="white" className="mb-8 font-black text-5xl"> 
@@ -1057,136 +1324,137 @@ const Dataview = () => {
               </div>
             </CardHeader>
             <CardBody className="p-6">
-              <div className="flex flex-wrap gap-4 mb-6">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="gradient"
-                  color="blue-900"
-                  className="flex items-center gap-2 shadow-md"
-                  onClick={handleButtonClick}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                      </svg>
-                      Upload CSV File
-                    </>
-                  )}
-                </Button>
-
-                {rawData && (
-                  <>
-                    {isAddingWidget ? (
-                      <Button
-                        variant="outlined"
-                        color="gray"
-                        className="flex items-center gap-2"
-                        onClick={() => setIsAddingWidget(false)}
-                      >
-                        Cancel
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        color="blue-900"
-                        className="flex items-center gap-2 shadow-sm"
-                        onClick={() => setIsAddingWidget(true)}
-                      >
-                        <PlusIcon className="h-4 w-4" /> Add Widget
-                      </Button>
-                    )}
-                    <Button
-                      variant="outlined"
-                      color="red"
-                      className="flex items-center gap-2 shadow-sm"
-                      onClick={resetDashboard}
-                    >
-                      <ArrowPathIcon className="h-4 w-4" /> Reset
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {error && (
-                <Alert color="red" className="mb-6 border border-red-100 shadow-sm">
-                  {error}
-                </Alert>
-              )}
-
-              {rawData && isAddingWidget && (
-                <WidgetConfigurator 
-                  rawData={rawData}
-                  columns={columns}
-                  addWidget={addWidget}
-                />
-              )}
-
-              {widgets.length > 0 ? (
-                <DndProvider backend={HTML5Backend}>
-                  <DashboardLayout isConfiguring={isConfiguring}>
-                    {widgets.map((widget, index) => (
-                      <DashboardWidget
-                        key={widget.id || index}
-                        id={widget.id || `widget-${index}`}
-                        index={index}
-                        {...widget}
-                        onRemove={removeWidget}
-                        onSizeChange={changeWidgetSize}
-                        onMoveWidget={moveWidget}
-                        isConfiguring={configuringWidgetId === widget.id || isConfiguring}
-                        onConfigureWidget={configureWidget}
-                      />
-                    ))}
-                  </DashboardLayout>
-                </DndProvider>
-              ) : (
-                rawData && (
-                  <Alert color="blue-900" className="mb-6 border border-blue-900/10 shadow-sm">
-                    No widgets added yet. Click "Add Widget" to create your dashboard.
-                  </Alert>
-                )
-              )}
-
-              {!rawData && !error && (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <div className="text-center mb-8">
-                    <PresentationChartLineIcon className="w-16 h-16 text-blue-900/20 mx-auto mb-4" />
-                    <Typography className="text-gray-700 text-xl font-semibold">
-                      Upload a CSV file to create your dashboard
-                    </Typography>
-                    <Typography className="text-gray-500 mt-2">
-                      Transform your data into interactive visualizations with just a few clicks
-                    </Typography>
-                  </div>
-                  <Button
-                    variant="gradient" 
-                    color="blue-900"
-                    size="lg"
-                    className="flex items-center gap-2 shadow-md"
-                    onClick={handleButtonClick}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
-                    Browse Files
-                  </Button>
+              {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
                 </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <Typography variant="small" className="font-semibold mb-2">Select File Category</Typography>
+                      <Select
+                        value={selectedCategory}
+                        onChange={(value) => handleCategoryChange(value)}
+                        className="w-full"
+                      >
+                        {Object.keys(fileCategories).map((category) => (
+                          <Option key={category} value={category}>
+                            {category.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                          </Option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    {selectedCategory && (
+                      <div>
+                        <Typography variant="small" className="font-semibold mb-2">Select File</Typography>
+                        <Select
+                          value={selectedFile?.uuid || ''}
+                          onChange={(value) => {
+                            const file = fileCategories[selectedCategory].find(f => f.uuid === value);
+                            handleFileSelect(file);
+                          }}
+                          className="w-full"
+                        >
+                          {fileCategories[selectedCategory].map((file) => (
+                            <Option key={file.uuid} value={file.uuid}>
+                              {file.filename} ({new Date(file.timeStamp).toLocaleDateString()})
+                            </Option>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 mb-6">
+                    {rawData && (
+                      <>
+                        {isAddingWidget ? (
+                          <Button
+                            variant="outlined"
+                            color="gray"
+                            className="flex items-center gap-2"
+                            onClick={() => setIsAddingWidget(false)}
+                          >
+                            Cancel
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outlined"
+                            color="blue-900"
+                            className="flex items-center gap-2 shadow-sm"
+                            onClick={() => setIsAddingWidget(true)}
+                          >
+                            <PlusIcon className="h-4 w-4" /> Add Widget
+                          </Button>
+                        )}
+                        <Button
+                          variant="outlined"
+                          color="red"
+                          className="flex items-center gap-2 shadow-sm"
+                          onClick={resetDashboard}
+                        >
+                          <ArrowPathIcon className="h-4 w-4" /> Reset
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {error && (
+                    <Alert color="red" className="mb-6 border border-red-100 shadow-sm">
+                      {error}
+                    </Alert>
+                  )}
+
+                  {rawData && isAddingWidget && (
+                    <WidgetConfigurator 
+                      rawData={rawData}
+                      columns={columns}
+                      addWidget={addWidget}
+                    />
+                  )}
+
+                  {widgets.length > 0 ? (
+                    <DndProvider backend={HTML5Backend}>
+                      <DashboardLayout isConfiguring={isConfiguring}>
+                        {widgets.map((widget, index) => (
+                          <DashboardWidget
+                            key={widget.id || index}
+                            id={widget.id || `widget-${index}`}
+                            index={index}
+                            {...widget}
+                            onRemove={removeWidget}
+                            onSizeChange={changeWidgetSize}
+                            onMoveWidget={moveWidget}
+                            isConfiguring={configuringWidgetId === widget.id || isConfiguring}
+                            onConfigureWidget={configureWidget}
+                          />
+                        ))}
+                      </DashboardLayout>
+                    </DndProvider>
+                  ) : (
+                    rawData && (
+                      <Alert color="blue-900" className="mb-6 border border-blue-900/10 shadow-sm">
+                        No widgets added yet. Click "Add Widget" to create your dashboard.
+                      </Alert>
+                    )
+                  )}
+
+                  {!rawData && !error && (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="text-center mb-8">
+                        <PresentationChartLineIcon className="w-16 h-16 text-blue-900/20 mx-auto mb-4" />
+                        <Typography className="text-gray-700 text-xl font-semibold">
+                          Select a file category and file to create your dashboard
+                        </Typography>
+                        <Typography className="text-gray-500 mt-2">
+                          Transform your data into interactive visualizations with just a few clicks
+                        </Typography>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardBody>
             {rawData && (
